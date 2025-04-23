@@ -1,0 +1,449 @@
+	<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grapher</title>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .input-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+        }
+		
+		  .QuestionMark {
+            display: none; 
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            z-index: 1000; 
+        }
+		  #toggleButton {
+            position: absolute;
+            top: 800px;
+            left: 0px;
+            z-index: 1001; 
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+		.Errormessage {
+            display: none; 
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            z-index: 1000; 
+        }
+		
+		
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas" width="1920" height="957"></canvas>
+	  <button id="toggleButton">?</button>
+	      <div class="overlay" id="overlay"></div>
+    <div class="QuestionMark" id="QuestionMark">
+        <p>An operation is repeated until a condition or set of conditions are met for a certain number of iterations. Based on the amount of iterations that have elapsed, a pixel is given a certain color. Only x,y and the variable a are supported for real functions. For complex functions Zn represents a point in a set and can be updated. c represents a point on the screen. a is a variable which is incremented, until reaching the upper limit and then decremented until it reaches the lower limit, continuing until "Pause animation" is pressed.
+		I am still in highschool so this program may contain some nonsense. To use these mathematical operations please type the following expressions into either the condition or operation input fields:
+		power:Math."pow(base , exponent)"  sin-function:"Math.sin()"  cos-function:"Math.cos()"  tan-function:"Math.tan()"  Square Root:"Math.sqrt()"  absolute value:"Math.abs()" 
+		(use "Math.abs(left side of real equation - right side of real equation)<=graph thickness value of your choice" in order to make real graphs more visible). Use && in between two conditions that both have to be met
+		and || if either one of two or both conditions may be met. After every operation please add a semicolon ";". In order to change a complex number or to refer to it in a condition use Zn = {real: Zn.real , imag:  Zn.imag} for Zn or c = {real: c.real , imag:  c.imag} for c. </p>
+    </div>
+	<div class="Errormessage" id="overlayerror"><p>Invalid Input</p></div>
+    <div class="input-container">
+        <label for="conditionInput">Conditions:</label>
+        <input type="text" id="conditionInput" size="100" value="Zn.real * Zn.real + Zn.imag * Zn.imag <= 4">
+        <br><br>
+		 <label for="operationInput">Operations:</label>
+        <input type="text" id="operationInput" size="100" value="Zn = {real: Zn.real * Zn.real - Zn.imag * Zn.imag + c.real, imag: a * Zn.real * Zn.imag + c.imag};">
+        <br><br>
+		
+        <label for="iterationsInput">Iterations:</label>
+        <input type="number" id="iterationsInput" value="50">
+        <br><br>
+		
+		<label for="a">Initial value of variable "a":</label>
+        <input type="number" id="a" value="2">
+		<label for="ChangeA">Increment/Decrement of variable "a":</label>
+        <input type="number" id="ChangeA" value="0.0000001">		
+        <br><br>
+		<label for="BottomA">Lower limit for a:</label>
+        <input type="number" id="BottomA" value="-1">	
+		<label for="TopA">Upper limit for a:</label>
+        <input type="number" id="TopA" value="2.2">
+		
+		<label for="pauseAnimation">Pause animation:</label>
+		 <input type="checkbox" id = "pauseAnimation" value = "pauseanimation" onclick = "pauseanimationfunction()" checked>
+		
+			
+        <button onclick="updateCondition()">Update Graph</button>
+    </div>
+	
+	 <div class="input-container" id = "resolution"  style="margin-left: 1700px;">
+	 <label for="DefaultCompression">Default Compression:</label>
+        <input type="number" id="defaultCompression" value="2">
+        <br><br>
+		 <label for="ZoomCompression">Zoom Compression:</label>
+        <input type="number" id="zoomCompression" value="8">
+		 <label for="rendercheck">Color based on iterations:</label>
+		 <input type="checkbox" id = "rendercheck" value = "fullrendering">
+        <br><br>
+	
+	
+	 </div>
+	
+	
+	
+	
+
+    <script>
+	
+	   const toggleButton = document.getElementById('toggleButton');
+        const QuestionMark = document.getElementById('QuestionMark');
+		        const Errormessage = document.getElementById('QuestionMark');
+
+        const overlay = document.getElementById('overlay');
+
+        toggleButton.addEventListener('click', () => {
+            const isVisible = QuestionMark.style.display === 'block';
+            QuestionMark.style.display = isVisible ? 'none' : 'block';
+            overlay.style.display = isVisible ? 'none' : 'block';
+        });
+
+        overlay.addEventListener('click', () => {
+            QuestionMark.style.display = 'none';
+            overlay.style.display = 'none';
+        });
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	let fullrendering = false;
+	let stop = false;
+        let isMouseDown = false;
+		let renderspeed = 20;
+        // Canvas
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const SCREEN_WIDTH = 1980;
+        const SCREEN_HEIGHT = 1080;
+		//Animation
+		let a = 2;
+		let increment = 0.0000001;
+		let direction = 1;
+		let borderUp = 2.2;
+		let borderDown = -1
+		let pauseanimation = true;;
+		//Misc.
+        let Zoomx = 300;
+        let Zoomy = 300;
+        let Scrollx = 0.6;
+        let Scrolly = 0.6;
+        let Iterations = 50;
+		let colorvalue ='rgb(255, 0, 0)';
+        
+        let userConditionFunction;
+        let userOperationFunction;
+		
+		let FunctionType = "complex";
+  let pixelSkip = 2;
+  
+  
+  
+  function pauseanimationfunction(){
+  		pauseanimation = document.getElementById("pauseAnimation").checked;   
+  }
+  
+  
+  
+  
+  
+  
+        function updateCondition() { 		stop = false;
+		fullrendering = document.getElementById("rendercheck").checked;
+		
+		a = parseFloat(document.getElementById("a").value);
+		increment = parseFloat(document.getElementById("ChangeA").value);
+		borderUp = parseFloat(document.getElementById("TopA").value);
+		borderDown = parseFloat(document.getElementById("BottomA").value);
+
+				
+            const conditionInput = document.getElementById("conditionInput").value.trim();
+			
+			
+	if(conditionInput.includes("Zn")){
+	FunctionType = "complex";
+	console.log("complex");
+	}
+		else{
+		FunctionType = "real";		
+			console.log("real");
+
+		}	
+            if (conditionInput) {
+                try {
+                    userConditionFunction = new Function(
+                        "x", "y", "Zn", "c", "a", `return ${conditionInput};`
+                    );
+                    console.log("Condition updated:", conditionInput);
+                    Iterations = parseInt(document.getElementById("iterationsInput").value) || 50;
+                } catch (error) {
+                    console.error("Error compiling condition:", error.message);
+                    userConditionFunction = (x,y, Zn, c, a) => Zn.real * Zn.real + Zn.imag * Zn.imag <= 4;
+                }
+            } else {
+                console.error("Condition is empty or invalid.");
+            }
+			
+			
+			
+			
+			            const operationInput = document.getElementById("operationInput").value.trim();
+
+
+
+
+	if(conditionInput.includes("Zn") || conditionInput.includes("c")){
+	FunctionType = "complex";
+	console.log("complex");
+	}
+		else{
+		FunctionType = "real";		
+			console.log("real");
+
+		}	
+
+
+		if (operationInput) {
+              	  try {
+                     userOperationFunction = new Function(
+                         "x", "y", "Zn", "c", "a", `return ${operationInput};`
+                     );
+                    console.log("Operation updated:", operationInput);
+                } catch (error) {
+                    console.error("Error compiling operation:", error.message);
+                    userOperationFunction = Zn = {
+                            real: Zn.real * Zn.real - Zn.imag * Zn.imag + c.real,
+                            imag: 2 * Zn.real * Zn.imag + c.imag};
+                }			
+
+            }else {
+                console.error("Operation is empty or invalid.");
+            }
+
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+        }
+
+        // Default Condition/Operation
+        userConditionFunction = (x,y, Zn, c, a ) => Zn.real * Zn.real + Zn.imag * Zn.imag <= 4;
+        userOperationFunction = (x,y, Zn, c, a ) => Zn = {
+                            real: Zn.real * Zn.real - Zn.imag * Zn.imag + c.real,
+                            imag: a * Zn.real * Zn.imag + c.imag};
+
+        // interaction
+        let previousPosition = { x: 0, y: 0 };
+        let currentPosition = { x: 0, y: 0 };
+
+        document.addEventListener('mousedown', (e) => {
+            previousPosition.x = e.clientX;
+            previousPosition.y = e.clientY;
+            isMouseDown = true;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (e.buttons === 1) {
+                currentPosition.x = e.clientX;
+                currentPosition.y = e.clientY;
+
+                const deltaX = currentPosition.x - previousPosition.x;
+                const deltaY = currentPosition.y - previousPosition.y;
+
+                Scrolly -= deltaY * 0.3 / Zoomy;
+                Scrollx += deltaX * 0.3 / Zoomx;
+
+                previousPosition.x = currentPosition.x;
+                previousPosition.y = currentPosition.y;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            previousPosition = { x: 0, y: 0 };
+            currentPosition = { x: 0, y: 0 };
+            isMouseDown = false;
+        });
+
+let wheelTimeout;
+
+document.addEventListener("wheel", (event) => {
+ Zoomy -= Zoomy*event.deltaY*0.0003;                              //Zoom speed
+  Zoomx -= Zoomx*event.deltaY*0.0003;
+  if(event.deltaY != 0 ){
+  isMouseDown = true;}
+  
+      clearTimeout(wheelTimeout);
+ wheelTimeout = setTimeout(() => {
+
+  isMouseDown = false;
+  }, 20); 
+ 
+});
+        function main() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+            setInterval(render, renderspeed);
+        }
+
+        function render() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+            const red = 'rgb(255, 0, 0)';
+            const green = 'rgb(0, 255, 0)';
+            
+			
+						let defaultCompressionvalue = 2;
+						let zoomCompressionvalue = 8;
+						
+						defaultCompressionvalue = parseFloat(document.getElementById("defaultCompression").value);
+						zoomCompressionvalue = parseFloat(document.getElementById("zoomCompression").value);
+	
+					  if(FunctionType == "complex"){
+       			      pixelSkip = isMouseDown ? zoomCompressionvalue : defaultCompressionvalue;
+				      }else{
+					  pixelSkip = 1;
+					  }
+	
+	
+	
+            for (let screenX = 0; screenX < SCREEN_WIDTH; screenX += pixelSkip) {
+                for (let screenY = 0; screenY < SCREEN_HEIGHT; screenY += pixelSkip) {
+                    let x = (screenX - SCREEN_WIDTH / 2) / Zoomx;
+                    let y = -(screenY - SCREEN_HEIGHT / 2) / Zoomy;
+				if(!stop){
+                    if (satisfiesEquation(x, y)) {
+					
+                        ctx.fillStyle = colorvalue;
+                        ctx.fillRect(screenX, screenY, pixelSkip, pixelSkip);
+                    }
+                }
+				
+				}
+            }
+        }
+
+        function satisfiesEquation(x, y) {					stop = false;
+
+            x -= Scrollx;
+            y -= Scrolly;
+			let n =0;
+            const tolerance = 0.001;
+            let check = true;
+            let c = { real: x, imag: y };
+            let Zn = { real: x, imag: y };
+
+            for ( n = 0; n <= Iterations; n++) {
+                try {
+				renderspeed = 20;
+				if(!pauseanimation){
+				if(a>=borderUp){
+				direction = -1;
+				}
+				else if(a <=borderDown){
+				direction = 1;
+				}
+				
+				if(direction == 1){
+				a+= increment;
+				}
+				else{a-= increment;
+				}}
+                    const conditionResult = userConditionFunction(x,y,Zn, c, a);
+					
+                    if (conditionResult) {  Zn =  userOperationFunction(x,y,Zn, c, a);
+                      
+                    } else {if(!fullrendering){
+                        check = false;
+						}
+                        break;
+                    }
+                } catch (error) {
+                    check = false;
+					stop = true;
+                    break;
+                }
+            }
+			
+			
+			
+			let redvalue = 255; let greenvalue = 0; let bluevalue = 0;
+			if(fullrendering){
+			 redvalue = 20*n;	
+			 greenvalue = (n*n)/3;
+			 bluevalue = 100-n*10;
+			
+			if(n >= Iterations){
+			redvalue =0;
+			greenvalue = 0;
+			bluevalue = 0;}}
+			
+			
+			colorvalue = 'rgb('.concat((redvalue).toString()).concat(',').concat((greenvalue).toString()).concat(',').concat((bluevalue).toString()).concat(')');
+			
+			
+			
+			
+			
+            return check;
+        }
+
+        main();
+    </script>
+</body>
+</html>
